@@ -31,3 +31,9 @@
 # Debug files
 *.dSYM/
 *.su
+
+
+nbproject
+.dep.inc
+observer_client
+observer_server
