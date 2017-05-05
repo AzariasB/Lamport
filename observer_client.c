@@ -46,6 +46,8 @@
 #define REQUEST_REPLY   3
 #define REQUEST_RELEASE 4
 
+#define MAX_REQUESTS 64
+
 typedef struct {
 	stamp sender;
 	int request_id;
@@ -53,9 +55,66 @@ typedef struct {
 
 static stamp client_stamp;
 
-static stamp queue[5];
+static stamp queue[MAX_PROCESSES];
+
+static client_request requests[MAX_REQUESTS];
+
+static stamp waiting[MAX_PROCESSES];
+
+static int reqs_pos = 0;
 
 static CLIENT *client;
+
+pthread_mutex_t m_requests;
+
+void dequeue_requests()
+{
+	pthread_mutex_lock(&m_requests);
+	for (int i = 1; i < MAX_REQUESTS; i++) {
+		requests[i - 1] = requests[i];
+	}
+
+	if (reqs_pos > 0)
+		reqs_pos--;
+
+	pthread_mutex_unlock(&m_requests);
+}
+
+void enqueue_request(client_request nw_req)
+{
+	pthread_mutex_lock(&m_requests);
+	if (reqs_pos < MAX_REQUESTS) {
+		requests[reqs_pos] = nw_req;
+		reqs_pos++;
+	}
+	pthread_mutex_unlock(&m_requests);
+
+}
+
+void handle_requests()
+{
+	printf("Need to handle %d request\n", reqs_pos);
+	pthread_mutex_lock(&m_requests);
+	for (int i = 0; i < reqs_pos; i++) {
+		client_request req = requests[i];
+		switch (req.request_id) {
+		case REQUEST_RELEASE:
+			dequeue_requests();
+			break;
+		case REQUEST_REPLY:
+			//Remove necessary reply from list
+			break;
+		case REQUEST_REQUEST:
+			enqueue_request(req);
+			break;
+		case REQUEST_MESSAGE:
+		default:
+			break;
+		}
+	}
+	reqs_pos = 0;
+	pthread_mutex_lock(&m_requests);
+}
 
 /**
  * Waits for any incoming connection
@@ -71,7 +130,6 @@ void *socket_server()
 	struct sockaddr_un cli_addr;
 	struct sockaddr_un srv_addr;
 
-	int nb_bytes;
 	if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 		printf("Failed to create socket server\n");
 		pthread_exit(NULL);
@@ -88,7 +146,6 @@ void *socket_server()
 
 	listen(sockfd, 5);
 
-	client_request req;
 
 	while (1) {
 		socklen_t clilen = sizeof(cli_addr);
@@ -99,11 +156,10 @@ void *socket_server()
 			printf("Error while accepting socket");
 		}
 
-		nb_bytes = 0;
-		bzero((client_request*) & req, sizeof(client_request));
+		static client_request req;
 		read(nwsockfd, &req, sizeof(client_request));
 		printf("Server received request %d from %u\n", req.request_id, req.sender.proccess_id);
-
+		enqueue_request(req);
 	}
 
 	pthread_exit(NULL);
@@ -226,6 +282,7 @@ void main_loop()
 			break;
 		}
 		client_stamp.action_number++;
+		handle_requests();
 	}
 }
 
@@ -286,6 +343,9 @@ int main(int argc, char *argv[])
 {
 	srand(time(NULL));
 
+	bzero(requests, sizeof(requests)); //reset all cells of "requests"
+
+	pthread_mutex_init(&m_requests, NULL);
 	char *host;
 
 	if (argc < 2) {
@@ -295,5 +355,6 @@ int main(int argc, char *argv[])
 	host = argv[1];
 	observer_1(host);
 
+	pthread_mutex_destroy(&m_requests);
 	exit(0);
 }

@@ -45,7 +45,7 @@ xdr_sndmsg_response (XDR *xdrs, sndmsg_response *objp)
 	register int32_t *buf;
 
 	int i;
-	 if (!xdr_vector (xdrs, (char *)objp->process, 5,
+	 if (!xdr_vector (xdrs, (char *)objp->process, MAX_PROCESSES,
 		sizeof (stamp), (xdrproc_t) xdr_stamp))
 		 return FALSE;
 	 if (!xdr_u_int (xdrs, &objp->stamp_number))

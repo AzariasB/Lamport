@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+#define MAX_PROCESSES 5
 
 struct stamp {
 	u_int proccess_id;
@@ -30,7 +31,7 @@ typedef struct wakeup_response wakeup_response;
 typedef wakeup_response wakeup_reponse;
 
 struct sndmsg_response {
-	stamp process[5];
+	stamp process[MAX_PROCESSES];
 	u_int stamp_number;
 };
 typedef struct sndmsg_response sndmsg_response;

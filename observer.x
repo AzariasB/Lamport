@@ -1,4 +1,6 @@
 
+const MAX_PROCESSES  = 5;
+
 struct stamp {
     unsigned int proccess_id;
     unsigned int action_number;
@@ -14,7 +16,7 @@ struct wakeup_response{
 typedef struct wakeup_response wakeup_reponse;
 
 struct sndmsg_response {
-    stamp process[5];
+    stamp process[MAX_PROCESSES];
     unsigned int stamp_number;
 };
 
