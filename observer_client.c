@@ -41,6 +41,16 @@
 #include <bits/string3.h>
 #include <bits/stdio2.h>
 
+#define REQUEST_MESSAGE 1
+#define REQUEST_REQUEST 2
+#define REQUEST_REPLY   3
+#define REQUEST_RELEASE 4
+
+typedef struct {
+	stamp sender;
+	int request_id;
+} client_request;
+
 static stamp client_stamp;
 
 static stamp queue[5];
@@ -61,7 +71,6 @@ void *socket_server()
 	struct sockaddr_un cli_addr;
 	struct sockaddr_un srv_addr;
 
-	char buffer[30];
 	int nb_bytes;
 	if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
 		printf("Failed to create socket server\n");
@@ -79,6 +88,8 @@ void *socket_server()
 
 	listen(sockfd, 5);
 
+	client_request req;
+
 	while (1) {
 		socklen_t clilen = sizeof(cli_addr);
 		printf("Waiting for a new connection ...\n");
@@ -89,11 +100,10 @@ void *socket_server()
 		}
 
 		nb_bytes = 0;
-		bzero((char*) buffer, 30);
-		read(nwsockfd, buffer, 20);
-		printf("Server received %s\n", buffer);
+		bzero((client_request*) & req, sizeof(client_request));
+		read(nwsockfd, &req, sizeof(client_request));
+		printf("Server received request %d from %u\n", req.request_id, req.sender.proccess_id);
 
-		//Do not write stuff
 	}
 
 	pthread_exit(NULL);
@@ -124,9 +134,13 @@ void socket_client(u_int contact_id)
 		perror("Error while connection to server\n");
 		return;
 	}
-	write(sockf, "Hey server!", 20);
-	printf("Client sent : Hey server!\n");
-	
+	client_request req;
+	req.request_id = REQUEST_MESSAGE;
+	req.sender = client_stamp;
+
+	write(sockf, &req, sizeof(client_request));
+	printf("Contacted client %u\n", contact_id);
+
 	//Nothing to receive from server ...
 }
 
@@ -152,7 +166,6 @@ void send_message()
 		for (int i = 0; i < result_2->stamp_number; i++) {
 			stamp other = result_2->process[i];
 			if (other.proccess_id != client_stamp.proccess_id) {
-				printf("Need to send another message to : %u from %u\n", other.proccess_id, client_stamp.proccess_id);
 				socket_client(other.proccess_id);
 				return;
 			}
@@ -181,6 +194,7 @@ void request()
 {
 	action_report report_action_1_arg;
 	report_action_1_arg.action_type = 1;
+	report_action_1_arg.process_stamp = client_stamp;
 	void *result_3 = report_action_1(&report_action_1_arg, client);
 	if (result_3 == (void *) NULL) {
 		clnt_perror(client, "call failed");
