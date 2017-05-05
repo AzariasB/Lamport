@@ -14,7 +14,7 @@ SOURCES.x = observer.x
 
 TARGETS_SVC.c = observer_svc.c observer_server.c observer_xdr.c 
 TARGETS_CLNT.c = observer_clnt.c observer_client.c observer_xdr.c 
-TARGETS = observer.h observer_xdr.c observer_clnt.c observer_svc.c observer_client.c observer_server.c
+TARGETS = observer.h observer_client.h observer_xdr.c observer_clnt.c observer_svc.c observer_client.c observer_server.c
 
 OBJECTS_CLNT = $(SOURCES_CLNT.c:%.c=%.o) $(TARGETS_CLNT.c:%.c=%.o)
 OBJECTS_SVC = $(SOURCES_SVC.c:%.c=%.o) $(TARGETS_SVC.c:%.c=%.o)

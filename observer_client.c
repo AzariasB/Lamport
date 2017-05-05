@@ -29,47 +29,10 @@
  */
 
 
-#include "observer.h"
-#include <time.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
-#include <bits/string3.h>
-#include <bits/stdio2.h>
-
-#define REQUEST_MESSAGE 1
-#define REQUEST_REQUEST 2
-#define REQUEST_REPLY   3
-#define REQUEST_RELEASE 4
-
-#define MAX_REQUESTS 64
-
-typedef struct {
-	stamp sender;
-	int request_id;
-} client_request;
-
-static stamp client_stamp;
-
-static stamp queue[MAX_PROCESSES];
-
-static client_request requests[MAX_REQUESTS];
-
-static stamp waiting[MAX_PROCESSES];
-
-static int reqs_pos = 0;
-
-static CLIENT *client;
-
-pthread_mutex_t m_requests;
+#include "observer_client.h"
 
 void dequeue_requests()
 {
-	pthread_mutex_lock(&m_requests);
 	for (int i = 1; i < MAX_REQUESTS; i++) {
 		requests[i - 1] = requests[i];
 	}
@@ -77,7 +40,6 @@ void dequeue_requests()
 	if (reqs_pos > 0)
 		reqs_pos--;
 
-	pthread_mutex_unlock(&m_requests);
 }
 
 void enqueue_request(client_request nw_req)
@@ -88,41 +50,40 @@ void enqueue_request(client_request nw_req)
 		reqs_pos++;
 	}
 	pthread_mutex_unlock(&m_requests);
-
 }
 
 void handle_requests()
 {
 	printf("Need to handle %d request\n", reqs_pos);
-	pthread_mutex_lock(&m_requests);
-	for (int i = 0; i < reqs_pos; i++) {
-		client_request req = requests[i];
-		switch (req.request_id) {
-		case REQUEST_RELEASE:
-			dequeue_requests();
-			break;
-		case REQUEST_REPLY:
-			//Remove necessary reply from list
-			break;
-		case REQUEST_REQUEST:
-			enqueue_request(req);
-			break;
-		case REQUEST_MESSAGE:
-		default:
-			break;
+	if (reqs_pos > 0) {
+		pthread_mutex_lock(&m_requests);
+		for (int i = 0; i < reqs_pos; i++) {
+			client_request req = requests[i];
+			switch (req.request_id) {
+			case REQUEST_RELEASE:
+				dequeue_requests();
+				break;
+			case REQUEST_REPLY:
+				//Remove necessary reply from list
+				break;
+
+			case REQUEST_REQUEST:
+				/**
+				 * When receiving a request : 
+				 * 
+				 */
+				break;
+			case REQUEST_MESSAGE:
+			default:
+				break;
+			}
 		}
+		reqs_pos = 0;
+		pthread_mutex_unlock(&m_requests);
 	}
-	reqs_pos = 0;
-	pthread_mutex_lock(&m_requests);
+
 }
 
-/**
- * Waits for any incoming connection
- * to send a request/reply/release
- * 
- * @param socketnumber
- * @return 
- */
 void *socket_server()
 {
 	printf("Socket server, waiting for any requests ...\n");
@@ -171,7 +132,7 @@ void local_action()
 	sleep(1);
 }
 
-void socket_client(u_int contact_id)
+void socket_client(u_int contact_id, int request_id)
 {
 	int sockf, srvlen;
 	struct sockaddr_un srv_addr;
@@ -191,7 +152,7 @@ void socket_client(u_int contact_id)
 		return;
 	}
 	client_request req;
-	req.request_id = REQUEST_MESSAGE;
+	req.request_id = request_id;
 	req.sender = client_stamp;
 
 	write(sockf, &req, sizeof(client_request));
@@ -200,18 +161,6 @@ void socket_client(u_int contact_id)
 	//Nothing to receive from server ...
 }
 
-/**
- * Send message to another process means :
- *  - Telling the server we want he list of other processes
- *  - Choosing a random process in the list, other than us)
- *  - Opening a client socket with this random process
- *  - Sending a message
- *  - Closing the socket
- * 
- * As simple as that !
- * 
- * @param clnt
- */
 void send_message()
 {
 	char *sndmsg_request_1_arg;
@@ -222,7 +171,7 @@ void send_message()
 		for (int i = 0; i < result_2->stamp_number; i++) {
 			stamp other = result_2->process[i];
 			if (other.proccess_id != client_stamp.proccess_id) {
-				socket_client(other.proccess_id);
+				socket_client(other.proccess_id, REQUEST_MESSAGE);
 				return;
 			}
 		}
@@ -231,21 +180,6 @@ void send_message()
 	}
 }
 
-/**
- * A request is made before entering in critcal section
- * the critcal section will be, here implemented as a simple 'sleep'
- * in a real example, it would actually lock some ressources and 
- * use a critical resource.
- * To do so, we need to :
- *  - Put the 'request' in its own waiting queu
- *  - Tell the observer we are going in critical section, and we need the the list of other processes
- *  - ask to the other processes (send them a 'request' message with sockets)
- *  - wait the reception of all the reply
- *  - entering in critical section
- *  - Send a "release" message to the others
- * 
- * @param clnt
- */
 void request()
 {
 	action_report report_action_1_arg;
@@ -261,9 +195,6 @@ void request()
 	}
 }
 
-/**
- * Main loop of the program
- */
 void main_loop()
 {
 	while (1) {
@@ -286,19 +217,6 @@ void main_loop()
 	}
 }
 
-/**
- * Entry point of the function :
- * 
- * Will first tell the observer it exists
- * Then, will loop forever, choosing between three action choices : 
- *  - 1 : do a local action (sleep) 
- *  - 2 : send a "message" to another process
- *  - 3 : ask and wait to enter in critical section
- * 
- * These three things will all increment the stamp value by one
- * 
- * @param host
- */
 void observer_1(char *host)
 {
 	pthread_t server;
