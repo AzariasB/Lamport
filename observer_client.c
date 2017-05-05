@@ -21,45 +21,169 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+/* 
+ * File:   observer_client.c
+ * Author: azarias
+ *
+ * Created on 5 mai 2017, 17:54
+ */
 
 
 #include "observer.h"
 #include <time.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <bits/string3.h>
+#include <bits/stdio2.h>
 
 static stamp client_stamp;
 
-void local_action(CLIENT *clnt)
+static stamp queue[5];
+
+static CLIENT *client;
+
+/**
+ * Waits for any incoming connection
+ * to send a request/reply/release
+ * 
+ * @param socketnumber
+ * @return 
+ */
+void *socket_server()
+{
+	printf("Socket server, waiting for any requests ...\n");
+	int sockfd, nwsockfd;
+	struct sockaddr_un cli_addr;
+	struct sockaddr_un srv_addr;
+
+	char buffer[30];
+	int nb_bytes;
+	if ((sockfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+		printf("Failed to create socket server\n");
+		pthread_exit(NULL);
+	}
+	bzero((char*) &srv_addr, sizeof(srv_addr));
+	srv_addr.sun_family = AF_UNIX;
+	sprintf(srv_addr.sun_path, "/tmp/localSocket.%u", client_stamp.proccess_id);
+	socklen_t srvlen = strlen(srv_addr.sun_path) + sizeof(srv_addr.sun_family);
+
+	if (bind(sockfd, (struct sockaddr*) &srv_addr, srvlen) < 0) {
+		printf("Failed to bind server socket\n");
+		pthread_exit(NULL);
+	}
+
+	listen(sockfd, 5);
+
+	while (1) {
+		socklen_t clilen = sizeof(cli_addr);
+		printf("Waiting for a new connection ...\n");
+		nwsockfd = accept(sockfd, (struct sockaddr*) &cli_addr, &clilen);
+
+		if (nwsockfd < 0) {
+			printf("Error while accepting socket");
+		}
+
+		nb_bytes = 0;
+		bzero((char*) buffer, 30);
+		read(nwsockfd, buffer, 20);
+		printf("Server received %s\n", buffer);
+
+		//Do not write stuff
+	}
+
+	pthread_exit(NULL);
+}
+
+void local_action()
 {
 	printf("Local action\n");
 	sleep(1);
 }
 
-void send_message(CLIENT *clnt)
+void socket_client(u_int contact_id)
+{
+	int sockf, srvlen;
+	struct sockaddr_un srv_addr;
+
+	bzero((char*) &srv_addr, sizeof(srv_addr));
+
+	srv_addr.sun_family = AF_UNIX;
+	sprintf(srv_addr.sun_path, "/tmp/localSocket.%u", contact_id);
+	srvlen = strlen(srv_addr.sun_path) + sizeof(srv_addr.sun_family);
+	if ((sockf = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+		perror("Error while creating the socket\n");
+		return;
+	}
+
+	if (connect(sockf, (struct sockaddr*) &srv_addr, srvlen) < 0) {
+		perror("Error while connection to server\n");
+		return;
+	}
+	write(sockf, "Hey server!", 20);
+	printf("Client sent : Hey server!\n");
+	
+	//Nothing to receive from server ...
+}
+
+/**
+ * Send message to another process means :
+ *  - Telling the server we want he list of other processes
+ *  - Choosing a random process in the list, other than us)
+ *  - Opening a client socket with this random process
+ *  - Sending a message
+ *  - Closing the socket
+ * 
+ * As simple as that !
+ * 
+ * @param clnt
+ */
+void send_message()
 {
 	char *sndmsg_request_1_arg;
-	sndmsg_response *result_2 = sndmsg_request_1((void*) &sndmsg_request_1_arg, clnt);
+	sndmsg_response *result_2 = sndmsg_request_1((void*) &sndmsg_request_1_arg, client);
 	if (result_2 == (sndmsg_response *) NULL) {
-		clnt_perror(clnt, "call failed");
+		clnt_perror(client, "call failed");
 	} else {
 		for (int i = 0; i < result_2->stamp_number; i++) {
 			stamp other = result_2->process[i];
 			if (other.proccess_id != client_stamp.proccess_id) {
-				printf("Need to send another message to : %u\n", other.proccess_id);
-				sleep(1);
-				break;
+				printf("Need to send another message to : %u from %u\n", other.proccess_id, client_stamp.proccess_id);
+				socket_client(other.proccess_id);
+				return;
 			}
 		}
+		//If still here : no other process was found
+		printf("Could not send message, other process not found\n");
 	}
 }
 
-void request(CLIENT *clnt)
+/**
+ * A request is made before entering in critcal section
+ * the critcal section will be, here implemented as a simple 'sleep'
+ * in a real example, it would actually lock some ressources and 
+ * use a critical resource.
+ * To do so, we need to :
+ *  - Put the 'request' in its own waiting queu
+ *  - Tell the observer we are going in critical section, and we need the the list of other processes
+ *  - ask to the other processes (send them a 'request' message with sockets)
+ *  - wait the reception of all the reply
+ *  - entering in critical section
+ *  - Send a "release" message to the others
+ * 
+ * @param clnt
+ */
+void request()
 {
 	action_report report_action_1_arg;
 	report_action_1_arg.action_type = 1;
-	void *result_3 = report_action_1(&report_action_1_arg, clnt);
+	void *result_3 = report_action_1(&report_action_1_arg, client);
 	if (result_3 == (void *) NULL) {
-		clnt_perror(clnt, "call failed");
+		clnt_perror(client, "call failed");
 	} else {
 		printf("Request going to critical section\n");
 		sleep(1);
@@ -67,59 +191,87 @@ void request(CLIENT *clnt)
 	}
 }
 
-void
-observer_1(char *host)
+/**
+ * Main loop of the program
+ */
+void main_loop()
 {
+	while (1) {
+		int action = rand() % 3;
+		switch (action) {
+		case 0:
+			local_action(client);
+			break;
+		case 1:
+			send_message(client);
+			break;
+		case 2:
+			request(client);
+			break;
+		default:
+			break;
+		}
+		client_stamp.action_number++;
+	}
+}
 
-	CLIENT *clnt;
-
+/**
+ * Entry point of the function :
+ * 
+ * Will first tell the observer it exists
+ * Then, will loop forever, choosing between three action choices : 
+ *  - 1 : do a local action (sleep) 
+ *  - 2 : send a "message" to another process
+ *  - 3 : ask and wait to enter in critical section
+ * 
+ * These three things will all increment the stamp value by one
+ * 
+ * @param host
+ */
+void observer_1(char *host)
+{
+	pthread_t server;
 
 
 #ifndef DEBUG
-	clnt = clnt_create(host, OBSERVER, FIRST_VERSION, "udp");
-	if (clnt == NULL) {
+	client = clnt_create(host, OBSERVER, FIRST_VERSION, "udp");
+	if (client == NULL) {
 		clnt_pcreateerror(host);
 		exit(1);
 	}
 #endif /* DEBUG */
 
 	char *wakeup_request_1_arg;
-	wakeup_response *result_1 = wakeup_request_1((void*) &wakeup_request_1_arg, clnt);
+	wakeup_response *result_1 = wakeup_request_1((void*) &wakeup_request_1_arg, client);
 	if (result_1 == (wakeup_response *) NULL || result_1->errno > 0) {
-		clnt_perror(clnt, "call failed");
+		clnt_perror(client, "call failed");
 	} else {
 		client_stamp.action_number = 0;
 		client_stamp.proccess_id = result_1->process_id;
 		printf("Process id is : %u\n", client_stamp.proccess_id);
 	}
-	
-	while (1) {
-		int action = rand() % 3;
-		switch (action) {
-		case 0:
-			local_action(clnt);
-			break;
-		case 1:
-			send_message(clnt);
-			break;
-		case 2:
-			request(clnt);
-			break;
-		default:
-			break;
-		}
-	}
+	pthread_create(&server, NULL, socket_server, NULL);
+	main_loop();
 
-
+	pthread_join(server, NULL);
 #ifndef DEBUG
-	clnt_destroy(clnt);
+	clnt_destroy(client);
 #endif  /* DEBUG */
 }
 
-int
-main(int argc, char *argv[])
+/**
+ * TODO: listen for SIGTERM and others
+ * to detect when killed and send a signal to
+ * observer to declared the death of the process
+ * 
+ * @param argc
+ * @param argv
+ * @return 
+ */
+int main(int argc, char *argv[])
 {
 	srand(time(NULL));
+
 	char *host;
 
 	if (argc < 2) {
@@ -128,5 +280,6 @@ main(int argc, char *argv[])
 	}
 	host = argv[1];
 	observer_1(host);
+
 	exit(0);
 }

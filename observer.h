@@ -54,8 +54,8 @@ extern  wakeup_response * wakeup_request_1_svc(void *, struct svc_req *);
 extern  sndmsg_response * sndmsg_request_1(void *, CLIENT *);
 extern  sndmsg_response * sndmsg_request_1_svc(void *, struct svc_req *);
 #define report_action 2
-extern  void * report_action_1(action_report *, CLIENT *);
-extern  void * report_action_1_svc(action_report *, struct svc_req *);
+extern  sndmsg_response * report_action_1(action_report *, CLIENT *);
+extern  sndmsg_response * report_action_1_svc(action_report *, struct svc_req *);
 extern int observer_1_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
 
 #else /* K&R C */
@@ -66,8 +66,8 @@ extern  wakeup_response * wakeup_request_1_svc();
 extern  sndmsg_response * sndmsg_request_1();
 extern  sndmsg_response * sndmsg_request_1_svc();
 #define report_action 2
-extern  void * report_action_1();
-extern  void * report_action_1_svc();
+extern  sndmsg_response * report_action_1();
+extern  sndmsg_response * report_action_1_svc();
 extern int observer_1_freeresult ();
 #endif /* K&R C */
 

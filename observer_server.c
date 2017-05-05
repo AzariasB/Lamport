@@ -21,7 +21,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+/* 
+ * File:   observer_server.h
+ * Author: azarias
+ *
+ * Created on 5 mai 2017, 17:54
+ */
 
 
 #include "observer.h"
@@ -31,37 +36,38 @@
 static int current_proccess_id = 0;
 
 //Current state of the observer : contains the stamps of all the connected processes
-static sndmsg_response directory = {.stamp_number = 0, .process =
-	{}};
+static sndmsg_response directory = {
+    .stamp_number = 0,
+    .process =
+    {}
+};
 
 wakeup_response *
-wakeup_request_1_svc(void *argp, struct svc_req *rqstp)
-{
-	static wakeup_response result;
-	result.errno = 0;
+wakeup_request_1_svc(void *argp, struct svc_req *rqstp) {
+    static wakeup_response result;
+    result.errno = 0;
 
-	if (directory.stamp_number == MAX_CONNECTIONS) {
-		result.errno = 1; // Reached maximum connections
-		result.process_id = 0;
-		return &result;
-	}
+    if (directory.stamp_number == MAX_CONNECTIONS) {
+        result.errno = 1; // Reached maximum connections
+        result.process_id = 0;
+        return &result;
+    }
 
-	result.process_id = current_proccess_id;
-	static stamp s;
-	s.action_number = 0;
-	s.proccess_id = result.process_id;
-	directory.process[directory.stamp_number] = s;
-	directory.stamp_number++;
-	current_proccess_id++;
-	printf("Current proccess id = %d\n", current_proccess_id);
-	return &result;
+    result.process_id = current_proccess_id;
+    static stamp s;
+    s.action_number = 0;
+    s.proccess_id = result.process_id;
+    directory.process[directory.stamp_number] = s;
+    directory.stamp_number++;
+    current_proccess_id++;
+    printf("Current proccess id = %d\n", current_proccess_id);
+    return &result;
 }
 
 sndmsg_response *
-sndmsg_request_1_svc(void *argp, struct svc_req *rqstp)
-{
+sndmsg_request_1_svc(void *argp, struct svc_req *rqstp) {
 
-	return &directory;
+    return &directory;
 }
 
 /**
@@ -78,12 +84,10 @@ sndmsg_request_1_svc(void *argp, struct svc_req *rqstp)
  * @param rqstp
  * @return 
  */
-void *
-report_action_1_svc(action_report *argp, struct svc_req *rqstp)
-{
-	static char * result;
+sndmsg_response *
+report_action_1_svc(action_report *argp, struct svc_req *rqstp) {
 
-	printf("Process number %u is reporting progress : %d - current stamp at %u\n", argp->process_stamp.proccess_id, argp->action_type, argp->process_stamp.action_number);
+    printf("Process number %u is reporting progress : %d - current stamp at %u\n", argp->process_stamp.proccess_id, argp->action_type, argp->process_stamp.action_number);
 
-	return(void *) &result;
+    return &directory;
 }

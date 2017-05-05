@@ -34,7 +34,7 @@ program OBSERVER{
         
         sndmsg_response sndmsg_request() = 1;
 
-        void report_action(action_report) = 2;
+        sndmsg_response report_action(action_report) = 2;
     }
     = 1;
 }
