@@ -76,7 +76,7 @@ int wl_isnext(waiting_list *wl, stamp st);
  * Removes the first element ofthe list
  * and shifts all the others
  */
-void wl_shift();
+void wl_shift(waiting_list *wl);
 
 
 #ifdef __cplusplus

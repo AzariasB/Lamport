@@ -54,6 +54,17 @@ void insert_at(waiting_list *wl, stamp nw_stamp, int index)
 }
 
 /**
+ * Checks wether to given stamps are equals (same counter + same process id)
+ * @param s1 the first stamp
+ * @param s2 the second stamp
+ * @return wether the two stamps are equals
+ */
+int are_equals(stamp s1, stamp s2)
+{
+	return s1.action_number == s2.action_number && s1.proccess_id == s2.proccess_id;
+}
+
+/**
  * Checks wether the stamp s1 is lower than
  * the stamp s2
  * @param s1
@@ -95,4 +106,16 @@ void wl_push(waiting_list* wl, stamp nw_stamp)
 	wl->queue[wl->last_pos] = nw_stamp;
 	wl->last_pos++;
 
+}
+
+int wl_isnext(waiting_list* wl, stamp st)
+{
+	return wl->last_pos > 0 && are_equals(wl->queue[0], st);
+}
+
+void wl_shift(waiting_list *wl)
+{
+	for (int i = 1; i < MAX_PROCESSES; i++) {
+		wl->queue[i - 1] = wl->queue[i];
+	}
 }

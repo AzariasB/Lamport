@@ -52,34 +52,27 @@ void enqueue_request(client_request nw_req)
 	pthread_mutex_unlock(&m_requests);
 }
 
-void handle_requests()
+void handle_request(client_request req)
 {
-	printf("Need to handle %d request\n", reqs_pos);
-	if (reqs_pos > 0) {
-		pthread_mutex_lock(&m_requests);
-		for (int i = 0; i < reqs_pos; i++) {
-			client_request req = requests[i];
-			switch (req.request_id) {
-			case REQUEST_RELEASE:
-				dequeue_requests();
-				break;
-			case REQUEST_REPLY:
-				//Remove necessary reply from list
-				break;
-
-			case REQUEST_REQUEST:
-				/**
-				 * When receiving a request : 
-				 * 
-				 */
-				break;
-			case REQUEST_MESSAGE:
-			default:
-				break;
-			}
-		}
-		reqs_pos = 0;
-		pthread_mutex_unlock(&m_requests);
+	switch (req.request_id) {
+	case REQUEST_REQUEST:
+		wl_push(wl, req.sender); //add to the waiting queue
+		socket_client(req.sender.proccess_id, REQUEST_REPLY); //answer to the sender
+		break;
+	case REQUEST_RELEASE:
+		wl_shift(wl);
+		//Check if can enter in critical section
+		break;
+	case REQUEST_REPLY:
+		//Decrease the counter
+		reply_counter--;
+		//Check if can enter in critical section
+		break;
+	case REQUEST_MESSAGE:
+		printf("Received message from %u\n", req.sender.proccess_id);
+		break;
+	default:
+		break;
 	}
 
 }
@@ -120,7 +113,7 @@ void *socket_server()
 		static client_request req;
 		read(nwsockfd, &req, sizeof(client_request));
 		printf("Server received request %d from %u\n", req.request_id, req.sender.proccess_id);
-		enqueue_request(req);
+		handle_request(req);
 	}
 
 	pthread_exit(NULL);
@@ -213,7 +206,6 @@ void main_loop()
 			break;
 		}
 		client_stamp.action_number++;
-		handle_requests();
 	}
 }
 
@@ -260,7 +252,7 @@ void observer_1(char *host)
 int main(int argc, char *argv[])
 {
 	srand(time(NULL));
-
+	wl = wl_create();
 	bzero(requests, sizeof(requests)); //reset all cells of "requests"
 
 	pthread_mutex_init(&m_requests, NULL);
@@ -274,5 +266,7 @@ int main(int argc, char *argv[])
 	observer_1(host);
 
 	pthread_mutex_destroy(&m_requests);
+
+	wl_destroy(wl);
 	exit(0);
 }

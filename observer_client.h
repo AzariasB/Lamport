@@ -39,6 +39,7 @@ extern "C"
 
 
 #include "observer.h"
+#include "waiting_list.h"
 #include <time.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -65,24 +66,27 @@ typedef struct
     int request_id;
 } client_request;
 
-static stamp client_stamp;
+stamp client_stamp;
 
-static stamp queue[MAX_PROCESSES];
+waiting_list *wl;
 
-static int q_pos = 0;
+client_request requests[MAX_REQUESTS];
 
-static client_request requests[MAX_REQUESTS];
+int reqs_pos = 0;
 
-static stamp waiting[MAX_PROCESSES];
+CLIENT *client;
 
-static int reqs_pos = 0;
+int reply_counter = 0;
 
-static CLIENT *client;
-
+/**
+ * Mutex for the requests array
+ */
 pthread_mutex_t m_requests;
 
 
 //Functions
+
+
 
 /**
  * Remove the first request in the list
@@ -105,7 +109,7 @@ void enqueue_request(client_request nw_req);
  * necessray task
  * At the end, resets the request counter to 0
  */
-void handle_requests();
+void handle_request(client_request req);
 
 /**
  * Waits for any incoming connection
