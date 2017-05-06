@@ -50,6 +50,7 @@ extern "C"
 #include <sys/un.h>
 #include <bits/string3.h>
 #include <bits/stdio2.h>
+#include <semaphore.h>
 
 #define REQUEST_MESSAGE 1
 #define REQUEST_REQUEST 2
@@ -83,10 +84,15 @@ int reply_counter = 0;
  */
 pthread_mutex_t m_requests;
 
+sem_t sem_cs;
 
 //Functions
 
-
+/**
+ * Checks wether it can enter in critical section
+ * If it does, post in the semaphore
+ */
+void check_cs();
 
 /**
  * Remove the first request in the list

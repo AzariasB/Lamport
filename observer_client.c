@@ -56,17 +56,23 @@ void handle_request(client_request req)
 {
 	switch (req.request_id) {
 	case REQUEST_REQUEST:
+		printf("Received a request, adding stamp to list\n");
 		wl_push(wl, req.sender); //add to the waiting queue
 		socket_client(req.sender.proccess_id, REQUEST_REPLY); //answer to the sender
 		break;
 	case REQUEST_RELEASE:
+		printf("Received a release, removing last stamp from list\n");
+		//remove the next process
 		wl_shift(wl);
 		//Check if can enter in critical section
+		check_cs();
 		break;
 	case REQUEST_REPLY:
 		//Decrease the counter
 		reply_counter--;
+		printf("Received a reply, decremented counter to %d\n", reply_counter);
 		//Check if can enter in critical section
+		check_cs();
 		break;
 	case REQUEST_MESSAGE:
 		printf("Received message from %u\n", req.sender.proccess_id);
@@ -112,7 +118,7 @@ void *socket_server()
 
 		static client_request req;
 		read(nwsockfd, &req, sizeof(client_request));
-		printf("Server received request %d from %u\n", req.request_id, req.sender.proccess_id);
+		//		printf("Server received request %d from %u\n", req.request_id, req.sender.proccess_id);
 		handle_request(req);
 	}
 
@@ -150,8 +156,13 @@ void socket_client(u_int contact_id, int request_id)
 
 	write(sockf, &req, sizeof(client_request));
 	printf("Contacted client %u\n", contact_id);
+}
 
-	//Nothing to receive from server ...
+void check_cs()
+{
+	if (reply_counter == 0 && wl_isnext(wl, client_stamp)) {
+		sem_post(&sem_cs);
+	}
 }
 
 void send_message()
@@ -178,13 +189,37 @@ void request()
 	action_report report_action_1_arg;
 	report_action_1_arg.action_type = 1;
 	report_action_1_arg.process_stamp = client_stamp;
-	void *result_3 = report_action_1(&report_action_1_arg, client);
+	sndmsg_response *result_3 = report_action_1(&report_action_1_arg, client);
 	if (result_3 == (void *) NULL) {
 		clnt_perror(client, "call failed");
 	} else {
-		printf("Request going to critical section\n");
-		sleep(1);
-		//Do something !
+		printf("Request going to critical section need to ask to %u other processes\n", result_3->stamp_number - 1);
+		reply_counter = result_3->stamp_number - 1;
+		wl_push(wl, client_stamp);
+		//Send a request to all other processes
+		for (int i = 0; i < result_3->stamp_number; i++) {
+			stamp s = result_3->process[i];
+			if (s.proccess_id != client_stamp.proccess_id) {
+				socket_client(s.proccess_id, REQUEST_REQUEST);
+			}
+		}
+		//Waiting for the reply + being next in the queue
+		//Don't need to wait if no other processes
+		if (reply_counter > 0) {
+			sem_wait(&sem_cs);
+		}
+		printf("Entering critical section...");
+		fflush(stdout);
+		sleep(2);
+		printf("exiting critical section !\n");
+		wl_shift(wl);
+		for (int i = 0; i < result_3->stamp_number; i++) {
+			stamp s = result_3->process[i];
+			if (s.proccess_id != client_stamp.proccess_id) {
+				socket_client(s.proccess_id, REQUEST_RELEASE);
+				//Warn all the other processes
+			}
+		}
 	}
 }
 
@@ -255,6 +290,7 @@ int main(int argc, char *argv[])
 	wl = wl_create();
 	bzero(requests, sizeof(requests)); //reset all cells of "requests"
 
+	sem_init(&sem_cs, 0, 0); //only shared between thread, starting with value '0'
 	pthread_mutex_init(&m_requests, NULL);
 	char *host;
 
@@ -266,7 +302,7 @@ int main(int argc, char *argv[])
 	observer_1(host);
 
 	pthread_mutex_destroy(&m_requests);
-
+	sem_destroy(&sem_cs);
 	wl_destroy(wl);
 	exit(0);
 }
