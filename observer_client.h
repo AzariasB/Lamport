@@ -48,9 +48,8 @@ extern "C"
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
-#include <bits/string3.h>
-#include <bits/stdio2.h>
 #include <semaphore.h>
+#include <signal.h>
 
 #define REQUEST_MESSAGE 1
 #define REQUEST_REQUEST 2

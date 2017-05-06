@@ -29,14 +29,21 @@
  */
 
 
+#include <bits/signum.h>
+
 #include "observer_client.h"
 
 void handle_end(int n)
 {
 	printf("Caught end signal - wars the observer\n");
-	
+
 	report(REPORT_END, -1);
 	pthread_cancel(server);
+	pthread_join(server, NULL);
+
+	sem_destroy(&sem_cs);
+	wl_destroy(wl);
+	exit(0);
 }
 
 void report(int action, int process_target)
@@ -294,6 +301,15 @@ int main(int argc, char *argv[])
 {
 	srand(time(NULL));
 	wl = wl_create();
+	struct sigaction sig;
+	sig.sa_handler = &handle_end;
+	sig.sa_flags = 0;
+	sigemptyset(&sig.sa_mask);
+	
+	sigaction(SIGKILL, &sig, NULL);
+	sigaction(SIGINT, &sig, NULL);
+
+
 
 	sem_init(&sem_cs, 0, 0); //only shared between thread, starting with value '0'
 	char *host;
