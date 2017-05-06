@@ -1,6 +1,16 @@
 
 const MAX_PROCESSES  = 5;
 
+const REPORT_SNDMSG = 1;
+const REPORT_SNDREQ = 2;
+const REPORT_SNDREP = 3;
+const REPORT_SNDREL = 4;
+const REPORT_RCVREQ = 5;
+const REPORT_RCVREP = 6;
+const REPORT_RCVREL = 7;
+const REPORT_RCVMSG = 8;
+const REPORT_LCLACT = 9;
+
 struct stamp {
     unsigned int proccess_id;
     unsigned int action_number;

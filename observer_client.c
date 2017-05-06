@@ -52,22 +52,37 @@ void enqueue_request(client_request nw_req)
 	pthread_mutex_unlock(&m_requests);
 }
 
+void report(int action)
+{
+	action_report report_action_1_arg;
+	report_action_1_arg.action_type = action;
+	report_action_1_arg.process_stamp = client_stamp;
+	sndmsg_response *result_3 = report_action_1(&report_action_1_arg, client);
+	if (result_3 == (void *) NULL) {
+		clnt_perror(client, "call failed");
+	}
+}
+
 void handle_request(client_request req)
 {
 	switch (req.request_id) {
 	case REQUEST_REQUEST:
 		printf("Received a request, adding stamp to list\n");
+		report(REPORT_RCVREQ);
 		wl_push(wl, req.sender); //add to the waiting queue
 		socket_client(req.sender.proccess_id, REQUEST_REPLY); //answer to the sender
+		report(REPORT_SNDREP);
 		break;
 	case REQUEST_RELEASE:
 		printf("Received a release, removing last stamp from list\n");
+		report(REPORT_RCVREL);
 		//remove the next process
 		wl_shift(wl);
 		//Check if can enter in critical section
 		check_cs();
 		break;
 	case REQUEST_REPLY:
+		report(REPORT_RCVREP);
 		//Decrease the counter
 		reply_counter--;
 		printf("Received a reply, decremented counter to %d\n", reply_counter);
@@ -75,6 +90,7 @@ void handle_request(client_request req)
 		check_cs();
 		break;
 	case REQUEST_MESSAGE:
+		report(REPORT_RCVMSG);
 		printf("Received message from %u\n", req.sender.proccess_id);
 		break;
 	default:
@@ -182,12 +198,13 @@ void send_message()
 		//If still here : no other process was found
 		printf("Could not send message, other process not found\n");
 	}
+	sleep(2);
 }
 
 void request()
 {
 	action_report report_action_1_arg;
-	report_action_1_arg.action_type = 1;
+	report_action_1_arg.action_type = REPORT_SNDREQ;
 	report_action_1_arg.process_stamp = client_stamp;
 	sndmsg_response *result_3 = report_action_1(&report_action_1_arg, client);
 	if (result_3 == (void *) NULL) {
@@ -213,6 +230,7 @@ void request()
 		sleep(2);
 		printf("exiting critical section !\n");
 		wl_shift(wl);
+		report(REPORT_SNDREL);
 		for (int i = 0; i < result_3->stamp_number; i++) {
 			stamp s = result_3->process[i];
 			if (s.proccess_id != client_stamp.proccess_id) {
@@ -230,9 +248,11 @@ void main_loop()
 		switch (action) {
 		case 0:
 			local_action(client);
+			report(REPORT_LCLACT);
 			break;
 		case 1:
 			send_message(client);
+			report(REPORT_SNDMSG);
 			break;
 		case 2:
 			request(client);

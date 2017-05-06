@@ -88,6 +88,14 @@ sem_t sem_cs;
 
 //Functions
 
+
+/**
+ * Report the given action
+ * to the observer
+ * @param action
+ */
+void report(int action);
+
 /**
  * Checks wether it can enter in critical section
  * If it does, post in the semaphore

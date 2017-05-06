@@ -14,6 +14,15 @@ extern "C" {
 #endif
 
 #define MAX_PROCESSES 5
+#define REPORT_SNDMSG 1
+#define REPORT_SNDREQ 2
+#define REPORT_SNDREP 3
+#define REPORT_SNDREL 4
+#define REPORT_RCVREQ 5
+#define REPORT_RCVREP 6
+#define REPORT_RCVREL 7
+#define REPORT_RCVMSG 8
+#define REPORT_LCLACT 9
 
 struct stamp {
 	u_int proccess_id;
