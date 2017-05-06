@@ -29,65 +29,81 @@
  */
 
 
-#include "observer.h"
+#include "observer_server.h"
 
-#define MAX_CONNECTIONS 10
-
-static int current_proccess_id = 0;
-
-//Current state of the observer : contains the stamps of all the connected processes
-static sndmsg_response directory = {
-    .stamp_number = 0,
-    .process =
-    {}
-};
-
-wakeup_response *
-wakeup_request_1_svc(void *argp, struct svc_req *rqstp) {
-    static wakeup_response result;
-    result.errno = 0;
-
-    if (directory.stamp_number == MAX_CONNECTIONS) {
-        result.errno = 1; // Reached maximum connections
-        result.process_id = 0;
-        return &result;
-    }
-
-    result.process_id = current_proccess_id;
-    static stamp s;
-    s.action_number = 0;
-    s.proccess_id = result.process_id;
-    directory.process[directory.stamp_number] = s;
-    directory.stamp_number++;
-    current_proccess_id++;
-    printf("Current proccess id = %d\n", current_proccess_id);
-    return &result;
+void remove_process_at(int index)
+{
+	for (int i = index; i < directory.stamp_number - 1; i++) {
+		directory.process[i] = directory.process[i + 1];
+	}
+	directory.stamp_number--;
 }
 
-sndmsg_response *
-sndmsg_request_1_svc(void *argp, struct svc_req *rqstp) {
-
-    return &directory;
+void remove_process(u_int process_id)
+{
+	for (int i = 0; i < directory.stamp_number; i++) {
+		if (directory.process[i].proccess_id == process_id) {
+			remove_process_at(i);
+			return;
+		}
+	}
 }
 
-/**
- * Reports an action from a process,
- * the different actions are :
- *  - 1 = report local action
- *  - 2 = report message received
- *  - 3 = report entering critical section
- *  - 4 = report sending reply
- *  - 5 = report sending release
- *  - 6 = report receiving release
- *  - 
- * @param argp
- * @param rqstp
- * @return 
- */
-sndmsg_response *
-report_action_1_svc(action_report *argp, struct svc_req *rqstp) {
+wakeup_response * wakeup_request_1_svc(void *argp, struct svc_req *rqstp)
+{
+	static wakeup_response result;
+	result.errno = 0;
 
-    printf("Process number %u is reporting progress : %d - current stamp at %u\n", argp->process_stamp.proccess_id, argp->action_type, argp->process_stamp.action_number);
+	if (directory.stamp_number == MAX_CONNECTIONS) {
+		result.errno = 1; // Reached maximum connections
+		result.process_id = 0;
+		return &result;
+	}
 
-    return &directory;
+	result.process_id = current_proccess_id;
+	static stamp s;
+	s.action_number = 0;
+	s.proccess_id = result.process_id;
+	directory.process[directory.stamp_number] = s;
+	directory.stamp_number++;
+	current_proccess_id++;
+	printf("Current proccess id = %d\n", current_proccess_id);
+	return &result;
+}
+
+sndmsg_response *sndmsg_request_1_svc(void *argp, struct svc_req *rqstp)
+{
+
+	return &directory;
+}
+
+sndmsg_response *report_action_1_svc(action_report *argp, struct svc_req *rqstp)
+{
+	printf("Process number %u is reporting progress : %d - current stamp at %u\n", argp->process_stamp.proccess_id, argp->action_type, argp->process_stamp.action_number);
+	switch (argp->action_type) {
+	case REPORT_SNDMSG:
+		break;
+	case REPORT_SNDREQ:
+		break;
+	case REPORT_SNDREP:
+		break;
+	case REPORT_SNDREL:
+		break;
+	case REPORT_RCVREQ:
+		break;
+	case REPORT_RCVREP:
+		break;
+	case REPORT_RCVREL:
+		break;
+	case REPORT_RCVMSG:
+		break;
+	case REPORT_LCLACT:
+		break;
+	case REPORT_END:
+		printf("Process terminated, removing it from list\n");
+		remove_process(argp->process_stamp.proccess_id);
+		break;
+	}
+
+	return &directory;
 }
