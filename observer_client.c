@@ -31,25 +31,12 @@
 
 #include "observer_client.h"
 
-void dequeue_requests()
+void handle_end(int n)
 {
-	for (int i = 1; i < MAX_REQUESTS; i++) {
-		requests[i - 1] = requests[i];
-	}
-
-	if (reqs_pos > 0)
-		reqs_pos--;
-
-}
-
-void enqueue_request(client_request nw_req)
-{
-	pthread_mutex_lock(&m_requests);
-	if (reqs_pos < MAX_REQUESTS) {
-		requests[reqs_pos] = nw_req;
-		reqs_pos++;
-	}
-	pthread_mutex_unlock(&m_requests);
+	printf("Caught end signal - wars the observer\n");
+	
+	report(REPORT_END, -1);
+	pthread_cancel(server);
 }
 
 void report(int action, int process_target)
@@ -207,6 +194,7 @@ void request()
 {
 	action_report report_action_1_arg;
 	report_action_1_arg.action_type = REPORT_SNDREQ;
+	report_action_1_arg.process_target = -1;
 	report_action_1_arg.process_stamp = client_stamp;
 	sndmsg_response *result_3 = report_action_1(&report_action_1_arg, client);
 	if (result_3 == (void *) NULL) {
@@ -253,7 +241,7 @@ void main_loop()
 			report(REPORT_LCLACT, -1);
 			break;
 		case 1:
-			report(REPORT_SNDMSG,  send_message(client));
+			report(REPORT_SNDMSG, send_message(client));
 			break;
 		case 2:
 			request(client);
@@ -267,9 +255,6 @@ void main_loop()
 
 void observer_1(char *host)
 {
-	pthread_t server;
-
-
 #ifndef DEBUG
 	client = clnt_create(host, OBSERVER, FIRST_VERSION, "udp");
 	if (client == NULL) {
@@ -309,10 +294,8 @@ int main(int argc, char *argv[])
 {
 	srand(time(NULL));
 	wl = wl_create();
-	bzero(requests, sizeof(requests)); //reset all cells of "requests"
 
 	sem_init(&sem_cs, 0, 0); //only shared between thread, starting with value '0'
-	pthread_mutex_init(&m_requests, NULL);
 	char *host;
 
 	if (argc < 2) {
@@ -322,7 +305,6 @@ int main(int argc, char *argv[])
 	host = argv[1];
 	observer_1(host);
 
-	pthread_mutex_destroy(&m_requests);
 	sem_destroy(&sem_cs);
 	wl_destroy(wl);
 	exit(0);

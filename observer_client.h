@@ -71,24 +71,19 @@ stamp client_stamp;
 
 waiting_list *wl;
 
-client_request requests[MAX_REQUESTS];
-
-int reqs_pos = 0;
-
 CLIENT *client;
 
 int reply_counter = 0;
 
-/**
- * Mutex for the requests array
- */
-pthread_mutex_t m_requests;
 
 sem_t sem_cs;
 
+
+pthread_t server;
 //Functions
 
 
+void handle_end(int n);
 
 /**
  * Report the given action,
@@ -104,19 +99,6 @@ void report_target(int action, int process_target);
  */
 void check_cs();
 
-/**
- * Remove the first request in the list
- * and shift all the remaining ones
- */
-void dequeue_requests();
-
-/**
- * Add the given request at the end
- * of the requests queue
- * 
- * @param nw_req
- */
-void enqueue_request(client_request nw_req);
 
 /**
  * Handles the requests in the list

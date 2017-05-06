@@ -10,6 +10,7 @@ const REPORT_RCVREP = 6;
 const REPORT_RCVREL = 7;
 const REPORT_RCVMSG = 8;
 const REPORT_LCLACT = 9;
+const REPORT_END    = 10;
 
 struct stamp {
     unsigned int proccess_id;
