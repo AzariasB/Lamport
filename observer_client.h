@@ -77,6 +77,10 @@ int reply_counter = 0;
 
 sem_t sem_cs;
 
+/**
+ * Mutex for the waiting list
+ */
+pthread_mutex_t m_wl;
 
 pthread_t server;
 //Functions

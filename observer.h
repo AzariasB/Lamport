@@ -24,6 +24,8 @@ extern "C" {
 #define REPORT_RCVMSG 8
 #define REPORT_LCLACT 9
 #define REPORT_END 10
+#define REPORT_CSCBGN 11
+#define REPORT_CSCEND 12
 
 struct stamp {
 	u_int proccess_id;

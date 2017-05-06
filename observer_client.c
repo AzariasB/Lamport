@@ -35,7 +35,7 @@
 
 void handle_end(int n)
 {
-	printf("Caught end signal - wars the observer\n");
+	printf("Caught end signal - warns the observer\n");
 
 	report(REPORT_END, -1);
 	pthread_cancel(server);
@@ -65,6 +65,7 @@ void handle_request(client_request req)
 		printf("Received a request, adding stamp to list\n");
 		report(REPORT_RCVREQ, req.sender.proccess_id);
 		wl_push(wl, req.sender); //add to the waiting queue
+		sleep(1); //Waiting for the client to warn all the clients and lock
 		socket_client(req.sender.proccess_id, REQUEST_REPLY); //answer to the sender
 		report(REPORT_SNDREP, req.sender.proccess_id);
 		break;
@@ -115,16 +116,17 @@ void *socket_server()
 		pthread_exit(NULL);
 	}
 
+
 	listen(sockfd, 5);
 
 
 	while (1) {
 		socklen_t clilen = sizeof(cli_addr);
-		printf("Waiting for a new connection ...\n");
+		//		printf("...\n");
 		nwsockfd = accept(sockfd, (struct sockaddr*) &cli_addr, &clilen);
 
 		if (nwsockfd < 0) {
-			printf("Error while accepting socket");
+			printf("Error while accepting socket\n");
 		}
 
 		static client_request req;
@@ -171,8 +173,22 @@ void socket_client(u_int contact_id, int request_id)
 
 void check_cs()
 {
+	int sem_value;
+	int res = sem_getvalue(&sem_cs, &sem_value);
+	if (res < 0) {
+		printf("Failed to get semaphore value\n");
+		return;
+	}
+	printf("Sem value = %d\n", sem_value);
+
 	if (reply_counter == 0 && wl_isnext(wl, client_stamp)) {
 		sem_post(&sem_cs);
+	} else {
+		if (reply_counter == 0)
+			printf("Can't go in critical section, next is %d\n", wl_next(wl));
+		else
+			printf("Can't go in critical section, counter is at %d\n", reply_counter);
+		wl_print(wl);
 	}
 }
 
@@ -224,8 +240,10 @@ void request()
 		}
 		printf("Entering critical section...");
 		fflush(stdout);
+		report(REPORT_CSCBGN, -1);
 		sleep(2);
 		printf("exiting critical section !\n");
+		report(REPORT_CSCEND, -2);
 		wl_shift(wl);
 		report(REPORT_SNDREL, -1); //send release to everyone
 		for (int i = 0; i < result_3->stamp_number; i++) {
@@ -240,6 +258,7 @@ void request()
 
 void main_loop()
 {
+	sleep(2); //Waiting the time to launch others
 	while (1) {
 		int action = rand() % 3;
 		switch (action) {
@@ -305,10 +324,9 @@ int main(int argc, char *argv[])
 	sig.sa_handler = &handle_end;
 	sig.sa_flags = 0;
 	sigemptyset(&sig.sa_mask);
-	
+
 	sigaction(SIGKILL, &sig, NULL);
 	sigaction(SIGINT, &sig, NULL);
-
 
 
 	sem_init(&sem_cs, 0, 0); //only shared between thread, starting with value '0'

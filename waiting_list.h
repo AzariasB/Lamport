@@ -34,6 +34,7 @@
 #define WAITING_LIST_H
 
 #include "observer.h"
+#include <pthread.h>
 
 
 #ifdef __cplusplus
@@ -42,6 +43,12 @@ extern "C"
 #endif
 
 
+/**
+ * The waiting list is a thread
+ * safe queue of stamps
+ * Every call to the 'public' functions
+ * restult in a mutex lock until completion
+ */
 typedef struct waiting_list waiting_list;
 
 /**
@@ -78,6 +85,19 @@ int wl_isnext(waiting_list *wl, stamp st);
  */
 void wl_shift(waiting_list *wl);
 
+/**
+ * Returns the id of the next element in the list
+ * @param wl the list to use
+ * @return the id of the next process
+ */
+int wl_next(waiting_list *wl);
+
+
+/**
+ * Prints out the given waiting list
+ * @param wl the waiting list
+ */
+void wl_print(waiting_list *wl);
 
 #ifdef __cplusplus
 }

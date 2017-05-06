@@ -59,7 +59,18 @@ static sndmsg_response directory = {
 //Functions
 //--------------
 
+/**
+ * Removes the process from the list
+ * @param process_id
+ */
 void remove_process(u_int process_id);
+
+/**
+ * Update the process from the given stamp
+ * in the directory list
+ * @param st
+ */
+void update_process(stamp st);
 
 /**
  * Called whenever a client

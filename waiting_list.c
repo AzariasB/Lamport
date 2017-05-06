@@ -27,7 +27,15 @@
 struct waiting_list {
 	stamp queue[MAX_PROCESSES];
 	int last_pos;
+	pthread_mutex_t mutex;
 };
+
+int wl_next(waiting_list* wl)
+{
+	if (wl->last_pos == 0)
+		return -1;
+	return wl->queue[0].proccess_id;
+}
 
 /**
  * Inserts the given stamp
@@ -53,7 +61,6 @@ void insert_at(waiting_list *wl, stamp nw_stamp, int index)
 	wl->last_pos++;
 }
 
-
 /**
  * Checks wether the stamp s1 is lower than
  * the stamp s2
@@ -70,17 +77,20 @@ waiting_list* wl_create()
 {
 	waiting_list *wl = malloc(sizeof(waiting_list));
 	wl->last_pos = 0;
+	pthread_mutex_init(&wl->mutex, NULL);
 	return wl;
 }
 
 void wl_destroy(waiting_list* wl)
 {
+	pthread_mutex_destroy(&wl->mutex);
 	free(wl);
 	wl = 0;
 }
 
 void wl_push(waiting_list* wl, stamp nw_stamp)
 {
+	pthread_mutex_lock(&wl->mutex);
 	if (wl->last_pos == MAX_PROCESSES) {
 		return; //not possible to insert
 	}
@@ -95,17 +105,35 @@ void wl_push(waiting_list* wl, stamp nw_stamp)
 	//Not inserted : insert at the end
 	wl->queue[wl->last_pos] = nw_stamp;
 	wl->last_pos++;
-
+	pthread_mutex_unlock(&wl->mutex);
 }
 
 int wl_isnext(waiting_list* wl, stamp st)
 {
-	return wl->last_pos > 0 && wl->queue[0].proccess_id == st.proccess_id;
+	pthread_mutex_lock(&wl->mutex);
+	int res = (wl->last_pos > 0 && wl->queue[0].proccess_id == st.proccess_id);
+	pthread_mutex_unlock(&wl->mutex);
+	return res;
 }
 
 void wl_shift(waiting_list *wl)
 {
+	pthread_mutex_lock(&wl->mutex);
 	for (int i = 1; i < MAX_PROCESSES; i++) {
 		wl->queue[i - 1] = wl->queue[i];
 	}
+	if (wl->last_pos > 0)
+		wl->last_pos--;
+	pthread_mutex_unlock(&wl->mutex);
+}
+
+void wl_print(waiting_list* wl)
+{
+	pthread_mutex_lock(&wl->mutex);
+	printf("[");
+	for (int i = 0; i < wl->last_pos; i++) {
+		printf("{counter: %u, id: %u}", wl->queue[i].action_number, wl->queue[i].proccess_id);
+	}
+	printf("]\n");
+	pthread_mutex_unlock(&wl->mutex);
 }

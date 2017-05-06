@@ -49,6 +49,15 @@ void remove_process(u_int process_id)
 	}
 }
 
+void update_process(stamp st)
+{
+	for (int i = 0; i < directory.stamp_number; i++) {
+		if (directory.process[i].proccess_id == st.proccess_id) {
+			directory.process[i].action_number = st.action_number;
+		}
+	}
+}
+
 wakeup_response * wakeup_request_1_svc(void *argp, struct svc_req *rqstp)
 {
 	static wakeup_response result;
@@ -79,30 +88,48 @@ sndmsg_response *sndmsg_request_1_svc(void *argp, struct svc_req *rqstp)
 
 sndmsg_response *report_action_1_svc(action_report *argp, struct svc_req *rqstp)
 {
-	printf("Process number %u is reporting progress : %d - current stamp at %u\n", argp->process_stamp.proccess_id, argp->action_type, argp->process_stamp.action_number);
+	update_process(argp->process_stamp);
+	//	printf("Process number %u is reporting progress : %d - current stamp at %u\n", argp->process_stamp.proccess_id, argp->action_type, argp->process_stamp.action_number);
+	printf("{p:%u,a:%u}=> ", argp->process_stamp.proccess_id, argp->process_stamp.action_number);
 	switch (argp->action_type) {
 	case REPORT_SNDMSG:
+		printf("sent message to %d\n", argp->process_target);
 		break;
 	case REPORT_SNDREQ:
+		printf("sent request to everyone\n");
 		break;
 	case REPORT_SNDREP:
+		printf("sent reply to %d\n", argp->process_target);
 		break;
 	case REPORT_SNDREL:
+		printf("sent release to everyone\n");
 		break;
 	case REPORT_RCVREQ:
+		printf("received request from %d\n", argp->process_target);
 		break;
 	case REPORT_RCVREP:
+		printf("received a reply from %d\n", argp->process_target);
 		break;
 	case REPORT_RCVREL:
+		printf("received a release from %d\n", argp->process_target);
 		break;
 	case REPORT_RCVMSG:
+		printf("received a message from %d\n", argp->process_target);
 		break;
 	case REPORT_LCLACT:
+		printf("did local action\n");
 		break;
 	case REPORT_END:
-		printf("Process terminated, removing it from list\n");
+		printf("terminated, removing it from list\n");
 		remove_process(argp->process_stamp.proccess_id);
 		break;
+	case REPORT_CSCBGN:
+		printf("begin critical section\n");
+		break;
+	case REPORT_CSCEND:
+		printf("ended critical section\n");
+		break;
+	default:break;
 	}
 
 	return &directory;
