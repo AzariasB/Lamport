@@ -49,6 +49,7 @@ typedef struct sndmsg_response sndmsg_response;
 struct action_report {
 	stamp process_stamp;
 	int action_type;
+	int process_target;
 };
 typedef struct action_report action_report;
 

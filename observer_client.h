@@ -89,12 +89,14 @@ sem_t sem_cs;
 //Functions
 
 
+
 /**
- * Report the given action
- * to the observer
- * @param action
+ * Report the given action,
+ * to the destination of the given target
+ * @param action action id
+ * @param process_target process target (default is -1)
  */
-void report(int action);
+void report_target(int action, int process_target);
 
 /**
  * Checks wether it can enter in critical section
@@ -158,9 +160,9 @@ void socket_client(u_int contact_id, int request_id);
  * 
  * As simple as that !
  * 
- * @param clnt
+ * @return the id of the process to which we sent a message
  */
-void send_message();
+int send_message();
 
 /**
  * A request is made before entering in critcal section
@@ -175,7 +177,6 @@ void send_message();
  *  - entering in critical section
  *  - Send a "release" message to the others
  * 
- * @param clnt
  */
 void request();
 
