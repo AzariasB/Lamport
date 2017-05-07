@@ -118,11 +118,23 @@ int wl_isnext(waiting_list* wl, stamp st)
 	return res;
 }
 
-void wl_shift(waiting_list *wl)
+void wl_shift(waiting_list *wl, stamp s)
 {
 	pthread_mutex_lock(&wl->mutex);
-	for (int i = 1; i < MAX_PROCESSES; i++) {
-		wl->queue[i - 1] = wl->queue[i];
+	//1 - find the index
+	int index;
+	for (index = 0; index < MAX_PROCESSES; index++) {
+		if (wl->queue[index].proccess_id == s.proccess_id)
+			break;
+	}
+	if (index == MAX_PROCESSES) {
+		pthread_mutex_unlock(&wl->mutex);
+		return;
+	}
+
+	//2 - remove it
+	for (; index < MAX_PROCESSES - 1; index++) {
+		wl->queue[index] = wl->queue[index + 1];
 	}
 	if (wl->last_pos > 0)
 		wl->last_pos--;

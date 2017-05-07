@@ -82,8 +82,10 @@ int wl_isnext(waiting_list *wl, stamp st);
 /**
  * Removes the first element ofthe list
  * and shifts all the others
+ * @param wl the waiting list to use
+ * @param s the stamp of the process to remove
  */
-void wl_shift(waiting_list *wl);
+void wl_shift(waiting_list *wl, stamp s);
 
 /**
  * Returns the id of the next element in the list

@@ -64,7 +64,8 @@ void handle_request(client_request req)
 	pthread_mutex_lock(&m_req);
 	switch (req.request_id) {
 	case REQUEST_REQUEST:
-		printf("Received a request, adding stamp to list\n");
+		printf("Received a request, adding {p:%u,a:%u} to : ", req.sender.proccess_id, req.sender.action_number);
+		wl_print(wl);
 		report(REPORT_RCVREQ, req.sender.proccess_id);
 		wl_push(wl, req.sender); //add to the waiting queue
 		sleep(1); //Waiting for the client to warn all the clients and lock
@@ -72,10 +73,11 @@ void handle_request(client_request req)
 		report(REPORT_SNDREP, req.sender.proccess_id);
 		break;
 	case REQUEST_RELEASE:
-		printf("Received a release, removing last stamp from list\n");
+		printf("Received a release, removing {p:%u} from :", req.sender.proccess_id);
+		wl_print(wl);
 		report(REPORT_RCVREL, req.sender.proccess_id);
 		//remove the next process
-		wl_shift(wl);
+		wl_shift(wl, req.sender);
 		//Check if can enter in critical section
 		check_cs();
 		break;
@@ -176,7 +178,6 @@ void socket_client(u_int contact_id, int request_id)
 
 void check_cs()
 {
-	wl_print(wl);
 	if (reply_counter == 0 && wl_isnext(wl, client_stamp)) {
 		sem_post(&sem_cs);
 	} else {
@@ -241,7 +242,7 @@ void request()
 		printf("exiting critical section !\n");
 		report(REPORT_CSCEND, -2);
 		pthread_mutex_unlock(&m_req);
-		wl_shift(wl);
+		wl_shift(wl, client_stamp);
 		report(REPORT_SNDREL, -1); //send release to everyone
 		for (int i = 0; i < result_3->stamp_number; i++) {
 			stamp s = result_3->process[i];
