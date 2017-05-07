@@ -92,6 +92,7 @@ void wl_push(waiting_list* wl, stamp nw_stamp)
 {
 	pthread_mutex_lock(&wl->mutex);
 	if (wl->last_pos == MAX_PROCESSES) {
+		pthread_mutex_unlock(&wl->mutex);
 		return; //not possible to insert
 	}
 
@@ -99,6 +100,7 @@ void wl_push(waiting_list* wl, stamp nw_stamp)
 		stamp s = wl->queue[i];
 		if (is_lower_than(nw_stamp, s)) {
 			insert_at(wl, nw_stamp, i);
+			pthread_mutex_unlock(&wl->mutex);
 			return;
 		}
 	}

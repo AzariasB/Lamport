@@ -54,6 +54,7 @@ void update_process(stamp st)
 	for (int i = 0; i < directory.stamp_number; i++) {
 		if (directory.process[i].proccess_id == st.proccess_id) {
 			directory.process[i].action_number = st.action_number;
+			return;
 		}
 	}
 }

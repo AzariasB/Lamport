@@ -80,7 +80,7 @@ sem_t sem_cs;
 /**
  * Mutex for the waiting list
  */
-pthread_mutex_t m_wl;
+pthread_mutex_t m_req;
 
 pthread_t server;
 //Functions

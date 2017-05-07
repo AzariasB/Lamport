@@ -43,6 +43,7 @@ void handle_end(int n)
 
 	sem_destroy(&sem_cs);
 	wl_destroy(wl);
+	pthread_mutex_destroy(&m_req);
 	exit(0);
 }
 
@@ -60,6 +61,7 @@ void report(int action, int process_target)
 
 void handle_request(client_request req)
 {
+	pthread_mutex_lock(&m_req);
 	switch (req.request_id) {
 	case REQUEST_REQUEST:
 		printf("Received a request, adding stamp to list\n");
@@ -80,7 +82,8 @@ void handle_request(client_request req)
 	case REQUEST_REPLY:
 		report(REPORT_RCVREP, req.sender.proccess_id);
 		//Decrease the counter
-		reply_counter--;
+		if (reply_counter > 0)
+			reply_counter--;
 		printf("Received a reply, decremented counter to %d\n", reply_counter);
 		//Check if can enter in critical section
 		check_cs();
@@ -92,7 +95,7 @@ void handle_request(client_request req)
 	default:
 		break;
 	}
-
+	pthread_mutex_unlock(&m_req);
 }
 
 void *socket_server()
@@ -173,14 +176,7 @@ void socket_client(u_int contact_id, int request_id)
 
 void check_cs()
 {
-	int sem_value;
-	int res = sem_getvalue(&sem_cs, &sem_value);
-	if (res < 0) {
-		printf("Failed to get semaphore value\n");
-		return;
-	}
-	printf("Sem value = %d\n", sem_value);
-
+	wl_print(wl);
 	if (reply_counter == 0 && wl_isnext(wl, client_stamp)) {
 		sem_post(&sem_cs);
 	} else {
@@ -188,7 +184,6 @@ void check_cs()
 			printf("Can't go in critical section, next is %d\n", wl_next(wl));
 		else
 			printf("Can't go in critical section, counter is at %d\n", reply_counter);
-		wl_print(wl);
 	}
 }
 
@@ -238,12 +233,14 @@ void request()
 		if (reply_counter > 0) {
 			sem_wait(&sem_cs);
 		}
+		pthread_mutex_lock(&m_req); //prevent handling any requests
 		printf("Entering critical section...");
 		fflush(stdout);
 		report(REPORT_CSCBGN, -1);
 		sleep(2);
 		printf("exiting critical section !\n");
 		report(REPORT_CSCEND, -2);
+		pthread_mutex_unlock(&m_req);
 		wl_shift(wl);
 		report(REPORT_SNDREL, -1); //send release to everyone
 		for (int i = 0; i < result_3->stamp_number; i++) {
@@ -328,7 +325,7 @@ int main(int argc, char *argv[])
 	sigaction(SIGKILL, &sig, NULL);
 	sigaction(SIGINT, &sig, NULL);
 
-
+	pthread_mutex_init(&m_req, NULL);
 	sem_init(&sem_cs, 0, 0); //only shared between thread, starting with value '0'
 	char *host;
 
@@ -340,6 +337,7 @@ int main(int argc, char *argv[])
 	observer_1(host);
 
 	sem_destroy(&sem_cs);
+	pthread_mutex_destroy(&m_req);
 	wl_destroy(wl);
 	exit(0);
 }
