@@ -55,7 +55,7 @@ void insert_at(waiting_list *wl, stamp nw_stamp, int index)
 
 	//Shift all the existing ones
 	for (int i = index; i < MAX_PROCESSES - 1; i++) {
-		wl->queue[index + 1] = wl->queue[index];
+		wl->queue[i + 1] = wl->queue[i];
 	}
 	wl->queue[index] = nw_stamp;
 	wl->last_pos++;
@@ -133,7 +133,7 @@ void wl_shift(waiting_list *wl, stamp s)
 	}
 
 	//2 - remove it
-	for (; index < MAX_PROCESSES - 1; index++) {
+	for (; index < wl->last_pos; index++) {
 		wl->queue[index] = wl->queue[index + 1];
 	}
 	if (wl->last_pos > 0)

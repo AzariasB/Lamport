@@ -64,7 +64,7 @@ void handle_request(client_request req)
 	pthread_mutex_lock(&m_req);
 	switch (req.request_id) {
 	case REQUEST_REQUEST:
-		printf("Received a request, adding {p:%u,a:%u} to : ", req.sender.proccess_id, req.sender.action_number);
+		printf("Received a request, adding {id:%u,counter:%u} to : ", req.sender.proccess_id, req.sender.action_number);
 		wl_print(wl);
 		report(REPORT_RCVREQ, req.sender.proccess_id);
 		wl_push(wl, req.sender); //add to the waiting queue
@@ -73,7 +73,7 @@ void handle_request(client_request req)
 		report(REPORT_SNDREP, req.sender.proccess_id);
 		break;
 	case REQUEST_RELEASE:
-		printf("Received a release, removing {p:%u} from :", req.sender.proccess_id);
+		printf("Received a release, removing {id:%u} from :", req.sender.proccess_id);
 		wl_print(wl);
 		report(REPORT_RCVREL, req.sender.proccess_id);
 		//remove the next process
