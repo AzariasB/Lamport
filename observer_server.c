@@ -91,7 +91,7 @@ sndmsg_response *report_action_1_svc(action_report *argp, struct svc_req *rqstp)
 {
 	update_process(argp->process_stamp);
 	//	printf("Process number %u is reporting progress : %d - current stamp at %u\n", argp->process_stamp.proccess_id, argp->action_type, argp->process_stamp.action_number);
-	printf("{p:%u,a:%u}=> ", argp->process_stamp.proccess_id, argp->process_stamp.action_number);
+	printf("{p:%d,a:%d}=> ", argp->process_stamp.proccess_id, argp->process_stamp.action_number);
 	switch (argp->action_type) {
 	case REPORT_SNDMSG:
 		printf("sent message %d to %d\n", argp->additionnal_data, argp->process_target);

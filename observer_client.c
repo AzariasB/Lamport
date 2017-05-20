@@ -37,9 +37,10 @@ void handle_end(int n)
 {
 	printf("Caught end signal - warns the observer\n");
 
-	full_report(REPORT_END, -1);
+	report(REPORT_END, -1);
 	pthread_cancel(server);
 	pthread_join(server, NULL);
+	printf("Stopped socket server\n");
 
 	sem_destroy(&sem_cs);
 	wl_destroy(wl);
@@ -109,7 +110,7 @@ void handle_request(client_request req)
 
 void *socket_server()
 {
-	printf("Socket server, waiting for any requests ...\n");
+	struct sigaction sig;
 	int sockfd, nwsockfd;
 	struct sockaddr_un cli_addr;
 	struct sockaddr_un srv_addr;
@@ -131,7 +132,7 @@ void *socket_server()
 
 	listen(sockfd, 5);
 
-
+	printf("Socket server, waiting for any requests ...\n");
 	while (1) {
 		socklen_t clilen = sizeof(cli_addr);
 		//		printf("...\n");
@@ -139,6 +140,7 @@ void *socket_server()
 
 		if (nwsockfd < 0) {
 			printf("Error while accepting socket\n");
+			break;
 		}
 
 		static client_request req;
@@ -146,6 +148,7 @@ void *socket_server()
 		//		printf("Server received request %d from %u\n", req.request_id, req.sender.proccess_id);
 		handle_request(req);
 	}
+	close(sockfd);
 	pthread_exit(NULL);
 }
 
