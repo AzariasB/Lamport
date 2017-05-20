@@ -64,5 +64,7 @@ xdr_action_report (XDR *xdrs, action_report *objp)
 		 return FALSE;
 	 if (!xdr_int (xdrs, &objp->process_target))
 		 return FALSE;
+	 if (!xdr_int (xdrs, &objp->additionnal_data))
+		 return FALSE;
 	return TRUE;
 }

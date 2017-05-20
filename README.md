@@ -10,8 +10,15 @@ Then, run the server :
 You can then start the clients (5 clients max)
 ./observer_client localhost
 
+# Possible issues
 
-#Explanations
+- rpc fails to connect when the server is launched => type 'rpcinfo'
+- socket fails to connect => file is not destroyed, make clean
+
+Cannot register service: RPC: Unable to receive; errno = Success
+
+
+# Explanations
 This project is an example of the mutual exclusion, implemented using Lamport mutal exclusion.
 
 Each process has an internal 'clock' and increments this clock for each action it does. This clock (stamp) is used to know

@@ -39,6 +39,7 @@ struct action_report {
     stamp process_stamp;
     int action_type;
     int process_target;
+    int additionnal_data;
 };
 
 typedef struct action_report action_report;

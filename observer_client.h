@@ -64,6 +64,7 @@ typedef struct
 {
     stamp sender;
     int request_id;
+    int additionnal_data;
 } client_request;
 
 stamp client_stamp;
@@ -74,6 +75,8 @@ CLIENT *client;
 
 int reply_counter = 0;
 
+//Id of the next message to send
+int msg_id = 0;
 
 sem_t sem_cs;
 

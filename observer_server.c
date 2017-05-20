@@ -94,7 +94,7 @@ sndmsg_response *report_action_1_svc(action_report *argp, struct svc_req *rqstp)
 	printf("{p:%u,a:%u}=> ", argp->process_stamp.proccess_id, argp->process_stamp.action_number);
 	switch (argp->action_type) {
 	case REPORT_SNDMSG:
-		printf("sent message to %d\n", argp->process_target);
+		printf("sent message %d to %d\n", argp->additionnal_data, argp->process_target);
 		break;
 	case REPORT_SNDREQ:
 		printf("sent request to everyone\n");
@@ -115,7 +115,7 @@ sndmsg_response *report_action_1_svc(action_report *argp, struct svc_req *rqstp)
 		printf("received a release from %d\n", argp->process_target);
 		break;
 	case REPORT_RCVMSG:
-		printf("received a message from %d\n", argp->process_target);
+		printf("received message %d from %d\n", argp->additionnal_data, argp->process_target);
 		break;
 	case REPORT_LCLACT:
 		printf("did local action\n");

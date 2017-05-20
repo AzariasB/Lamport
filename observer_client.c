@@ -37,7 +37,7 @@ void handle_end(int n)
 {
 	printf("Caught end signal - warns the observer\n");
 
-	report(REPORT_END, -1);
+	full_report(REPORT_END, -1);
 	pthread_cancel(server);
 	pthread_join(server, NULL);
 
@@ -47,24 +47,31 @@ void handle_end(int n)
 	exit(0);
 }
 
-void report(int action, int process_target)
+void full_report(int action, int process_target, int additionnal_data)
 {
 	action_report ra;
 	ra.action_type = action;
 	ra.process_stamp = client_stamp;
 	ra.process_target = process_target;
+	ra.additionnal_data = additionnal_data;
 	sndmsg_response *result_3 = report_action_1(&ra, client);
 	if (result_3 == (void *) NULL) {
 		clnt_perror(client, "call failed");
 	}
 }
 
+void report(int action, int process_target)
+{
+	full_report(action, process_target, -1);
+}
+
 void handle_request(client_request req)
 {
+	//Lock the mutex to do avoid processing request when in critical section
 	pthread_mutex_lock(&m_req);
 	switch (req.request_id) {
 	case REQUEST_REQUEST:
-		printf("Received a request, adding {id:%u,counter:%u} to : ", req.sender.proccess_id, req.sender.action_number);
+		printf("Received a request, adding {id:%d,counter:%d} to : ", req.sender.proccess_id, req.sender.action_number);
 		wl_print(wl);
 		report(REPORT_RCVREQ, req.sender.proccess_id);
 		wl_push(wl, req.sender); //add to the waiting queue
@@ -73,7 +80,7 @@ void handle_request(client_request req)
 		report(REPORT_SNDREP, req.sender.proccess_id);
 		break;
 	case REQUEST_RELEASE:
-		printf("Received a release, removing {id:%u} from :", req.sender.proccess_id);
+		printf("Received a release, removing {id:%d} from :", req.sender.proccess_id);
 		wl_print(wl);
 		report(REPORT_RCVREL, req.sender.proccess_id);
 		//remove the next process
@@ -91,8 +98,8 @@ void handle_request(client_request req)
 		check_cs();
 		break;
 	case REQUEST_MESSAGE:
-		report(REPORT_RCVMSG, req.sender.proccess_id);
-		printf("Received message from %u\n", req.sender.proccess_id);
+		full_report(REPORT_RCVMSG, req.sender.proccess_id, req.additionnal_data);
+		printf("Received message %d from %d\n", req.additionnal_data, req.sender.proccess_id);
 		break;
 	default:
 		break;
@@ -139,7 +146,6 @@ void *socket_server()
 		//		printf("Server received request %d from %u\n", req.request_id, req.sender.proccess_id);
 		handle_request(req);
 	}
-
 	pthread_exit(NULL);
 }
 
@@ -171,9 +177,14 @@ void socket_client(u_int contact_id, int request_id)
 	client_request req;
 	req.request_id = request_id;
 	req.sender = client_stamp;
+	if (request_id == REQUEST_MESSAGE) {
+		req.additionnal_data = msg_id++;
+	} else {
+		req.additionnal_data = -1;
+	}
 
 	write(sockf, &req, sizeof(client_request));
-	printf("Contacted client %u\n", contact_id);
+	printf("Contacted client %d\n", contact_id);
 }
 
 void check_cs()
@@ -219,7 +230,7 @@ void request()
 	if (result_3 == (void *) NULL) {
 		clnt_perror(client, "call failed");
 	} else {
-		printf("Request going to critical section need to ask to %u other processes\n", result_3->stamp_number - 1);
+		printf("Request going to critical section need to ask to %d other processes\n", result_3->stamp_number - 1);
 		reply_counter = result_3->stamp_number - 1;
 		wl_push(wl, client_stamp);
 		//Send a request to all other processes
@@ -265,7 +276,7 @@ void main_loop()
 			report(REPORT_LCLACT, -1);
 			break;
 		case 1:
-			report(REPORT_SNDMSG, send_message(client));
+			full_report(REPORT_SNDMSG, send_message(client), msg_id);
 			break;
 		case 2:
 			request(client);
@@ -294,7 +305,7 @@ void observer_1(char *host)
 	} else {
 		client_stamp.action_number = 0;
 		client_stamp.proccess_id = result_1->process_id;
-		printf("Process id is : %u\n", client_stamp.proccess_id);
+		printf("Process id is : %d\n", client_stamp.proccess_id);
 	}
 	pthread_create(&server, NULL, socket_server, NULL);
 	main_loop();
