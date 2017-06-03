@@ -38,7 +38,10 @@ extern "C"
 #endif
 
 #include "observer.h"
-
+#include "saved_action.h"
+#include "array_list.h"
+#include "svg_file.h"
+#include "history_writer.h"
 #define MAX_CONNECTIONS 10
 
 //------------
@@ -55,6 +58,9 @@ static sndmsg_response directory = {
     {}
 };
 
+// History of the actions : list of action types and stamp
+list* action_history;
+int history_created = 0;
 //--------------
 //Functions
 //--------------
@@ -109,6 +115,7 @@ sndmsg_response *sndmsg_request_1_svc(void *argp, struct svc_req *rqstp);
 sndmsg_response *report_action_1_svc(action_report *argp, struct svc_req *rqstp);
 
 
+void first_call();
 #ifdef __cplusplus
 }
 #endif

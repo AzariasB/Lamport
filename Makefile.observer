@@ -6,7 +6,7 @@
 CLIENT = observer_client
 SERVER = observer_server
 MAIN = main
-
+LIBS = -lm
 SOURCES_CLNT.c = 
 SOURCES_CLNT.h = 
 SOURCES_SVC.c = 
@@ -15,14 +15,14 @@ SOURCES.x = observer.x
 
 TARGETS_SVC.c = observer_svc.c observer_server.c observer_xdr.c 
 TARGETS_CLNT.c = observer_clnt.c observer_client.c observer_xdr.c waiting_list.c
-TARGETS = main.c observer.h waiting_list.h observer_client.h observer_server.h observer_xdr.c observer_clnt.c observer_svc.c observer_client.c observer_server.c
+TARGETS = main.c history_writer.c observer.h waiting_list.h observer_client.h observer_server.h observer_xdr.c observer_clnt.c observer_svc.c observer_client.c observer_server.c
 
 OBJECTS_CLNT = $(SOURCES_CLNT.c:%.c=%.o) $(TARGETS_CLNT.c:%.c=%.o)
 OBJECTS_SVC = $(SOURCES_SVC.c:%.c=%.o) $(TARGETS_SVC.c:%.c=%.o)
 # Compiler flags 
 
 CFLAGS += -g  -std=c11 -D_POSIX_C_SOURCE
-LDLIBS += -lnsl -lpthread 
+LDLIBS += -lnsl -lpthread -lm 
 RPCGENFLAGS = 
 
 # Targets 
