@@ -22,11 +22,13 @@
  * THE SOFTWARE.
  */
 /* 
- * File:   observer_server.h
+ * File:   observer_server.c
  * Author: azarias
  *
  * Created on 5 mai 2017, 17:54
  */
+
+#include "observer_server.h"
 
 
 #include "observer.h"
@@ -34,6 +36,7 @@
 #include "array_list.h"
 #include "svg_file.h"
 #include "history_writer.h"
+
 void remove_process_at(int index) {
     for (int i = index; i < directory.stamp_number - 1; i++) {
         directory.process[i] = directory.process[i + 1];

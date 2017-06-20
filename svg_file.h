@@ -14,6 +14,9 @@
 #ifndef SVG_FILE_H
 #define SVG_FILE_H
 #include "geometry.h"
+
+#include <stdio.h>
+
 #include "color.h"
 #define HEADER "<!DOCTYPE html>\n<html>\n<body>\n<h1>Lamport SVG</h1>\n<svg width=\"1000\" height=\"1000\">\n"
 #define FOOTER "</svg> \n</body>\n</html>"

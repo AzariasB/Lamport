@@ -41,7 +41,7 @@ extern "C"
 #include "saved_action.h"
 #include "array_list.h"
 #include "svg_file.h"
-#include "history_writer.h"
+
 #define MAX_CONNECTIONS 10
 
 //------------
@@ -60,7 +60,7 @@ static sndmsg_response directory = {
 
 // History of the actions : list of action types and stamp
 list* action_history;
-int history_created = 0;
+static int history_created = 0;
 //--------------
 //Functions
 //--------------

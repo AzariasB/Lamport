@@ -18,7 +18,7 @@
 #include "array_list.h"
 #include "geometry.h"
 #include "saved_action.h"
-#include "observer_server.h"
+
 typedef struct action_start action_start;
 struct action_start{
     point* start;
